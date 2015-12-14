@@ -1,0 +1,127 @@
+sql分为3类：DDL
+  DDL：Data Definition Language ，数据定义语言
+    定义了不同的数据段，数据库，表，列，索引等数据库对象。creater，drop，alter
+    create table xw_vote_detail(
+    	id int(11) not null increment ...
+    );
+    
+  DML：Data Manipulation Language，数据操作语句
+    用于增删改查，检查数据的完整性。insert，update，select，delete 。这是目前用的最多的。
+    
+  DCL：Data Control Language，数据控制语句
+    用于控制不同数据段直接的许可和访问级别的语句，定义了数据库，表，字段，用户的访问权限和安全级别。
+    grant（授予; 承认; 同意; 准许），revoke（废除; 撤销，取消）。目前并没有接触过，或者接触过但是不认识
+    
+DDL：
+  创建数据库：create database account ; show databases ; use account ;
+  创建表
+  create table `account_user`(
+  	`id` int(11) unsigned not null auto_increment ,
+  	`name` varchar(64) not null default '' comment'姓名',
+  	`age` tinyint(3) not null default 0 ,
+  	`status` tinyint(1) not null default 0 ,
+  	key(`name`),
+  	primary key(`id`)
+  )ENGINE=InnoDB DEFAULT charset=utf8 auto_increment=1;
+  
+  create table `user_salay`(
+  	`id` int(11) unsigned not null auto_increment,
+  	`userid` int(11) unsigned not null ,
+  	`name` varchar(64) not null default '',
+  	`month_income` int(11) unsigned not null default 0,
+  	`extra_income` int(11) unsigned not null default 0,
+  	`day_outcome` int(11) unsigned not null default 0,
+  	`month_outcome` int(11) unsigned not null default 0 comment'月支出',
+  	`status` tinyint(1) not null default 1 comment'0：无效，1：有效',
+  	key(`userid`),
+  	key(`name`),
+  	primary key(`id`)
+  )ENGINE=myisam DEFAULT charset=utf8 auto_increment=1;
+  增加字段
+  alter table `account_user` add [column] `createtime` int(11) not null [after|first] `age`;
+  修改字段
+  alter table `account_user` modify `createtime` int(11) not null after `age`; 
+  删除字段
+  alter table `account_user` drop `createtime` ;
+  字段改名
+  alter table `account_user` change `createtime` `createdate` int(11) ;
+  修改表名
+  alter table `account_user` rename `account_users` ; 
+  显示表结构
+  desc `account_user`;
+  
+  DML：
+  同时修改多表
+  update t1,t2  set t1.name=t2.name, t2.name=t1.name ;
+  同时删除多表
+  delete t1,t2 from t1,t2 where 1=1 ;
+  查询不重复：关键字 distinct
+  分组查询：
+  select [field,field2...] fun_name 
+  from table_name
+  [where condition]
+  [group by field,field2...
+  [with rollup]]
+  [having where_conditional]
+  
+  fun_name：聚合函数
+  with rollup：是否对分类聚合后的结果在进行汇总
+  
+  内连接，外连接
+  内连接，只匹配2个表中符合要求的记录，这个连接是我用的比较多的一种多表查询。
+  	select * from account_user u , user_salay s where u.id=s.userid;
+  外连接：左连接，右连接
+  外连接又分为左连接和右连接。左连接：包括所有左边的记录。右连接：包括所有右边的记录。
+  	select * from account_user u left join user_salay s on u.id=s.userid; 
+  	select * from account_user u right join user_salay s on u.id=s.userid; 
+  子查询：关键字 in , not in , = , != , exist , not exist 等 
+  记录联合：关键字 union ， union all 。区别：union去掉重复记录，union all 不去掉重复记录
+  
+DCL：
+  授权：grant insert,select on account.* to 'pzr'@'localhost' identified by '123' ;
+  取消：revoke insert on account.* from 'pzr'@'localhost' ;
+  
+数据类型：
+数值类型：tinyint  1字节，smallint 2字节，mediumint 3字节，int 4字节，bigint 8字节，float 4字节，double  8字节，dec( M , D) == decimal( M , D )  M+2字节 , bit( M ) 1～8字节
+
+ tinyint(1)  和 tinyint(2) 的区别 ： 1 , 2 只是宽度限制，但是如果设置的值超过了这个宽度，并不会影响值。
+ create table test(
+ 	`id` int(11) unsigned not null auto_increment , 
+ 	`id1` tinyint(1) unsigned not null default 0 zerofill , 
+ 	`id2` tinyint(2) unsigned not null default 0 zerofill, 
+ 	primary key(`id`)
+ )ENGINE=InnoDB DEFAULT charset=utf8 auto_increment=1 ;
+ insert into test(`id1`,`id2`) values(1,1) ;
+ select * from test;
+ result: 1 01 实际的意义差不多，只是宽度不同。
+ 
+ int(5) 和 int(11) 能够存储的最大值相同，但是存储值的宽度不同。
+ bit(M) : 只能存储字节，可以用函数bin(id) 2进制 或者 hax(id) 16进制 查看。
+ 
+ 时间类型：date , datetime , time , timestamp ,year 
+   timestamp 和 datetime的区别：
+   datetime：yyyy-MM-dd HH:mm:ss ,本地时区时间， 但是在其他地区读取的时间不会经过转换。
+   timestmap:yyyyMMddHHmmss ,本地时区时间，存储时转换为本地时区时间在插入，读取时也是先转换为本地时区时间在读取。所以在不同地区读出的值可能不同。用来描述时间更加的精确。
+     一个表中存在多个timestamp时，只有第一个timestamp能够设置为默认的current_timestamp
+      
+  date，datetime，time的区别：datetime是date和time的结合。
+  date：yyyy-MM-dd
+  datetime：yyyy-MM-dd HH:mm:ss
+  time : HH:mm:ss 
+  
+  时间函数：now() current_time , current_date , current_timestamp  
+  
+字符串类型：char(M) , varchar , tinyblob , blob , mediumblob , longblob , tinytext , text , mediumtext , longtext , varbinary(M) , binary(M)
+char(M) 和 varchar 区别：
+char指定的长度，会截取最后的空格。eg：存入'test  ' 则为 ’test‘
+varchar 可变长度，保留空格。             eg：存入’test  ‘ 则为 ’test  ‘
+  
+枚举类型：
+SET 类型：
+create table test(
+	`set` set( 'a' , 'b' , 'c' ) 
+)  
+insert into test values( 'a,b'),('a,c'),('b,c') ; warning：('a,c,c') == ('a,c')去除重复项
+
+运算符：位或(|)，位与(&)，位异或(xor ^ )，位取反(~)，like，is null ， is not null , regexp==rlike 正则匹配 , <=> null也可比较等于  
+  
