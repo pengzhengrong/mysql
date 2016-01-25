@@ -49,7 +49,19 @@ DDL：
   alter table `account_user` rename `account_users` ; 
   显示表结构
   desc `account_user`;
+  修改索引
+  alter table `account_user` add index index_name(`name`)
+  alter table `account_user` add unique(`name`)
+  alter table `account_user` add primary key `name`
+  create index `name` on account_user( `name`)
+  alter table `account_user` drop index(`name`)
+  alter table `account_user` add index(`username`,`password`);  
+  create index idx_title on account( title(10) ); 排序和分组无效 对title的前10个字符进行索引。
   
+ drop index index_name on table_name ;
+alter table table_name drop index index_name ;
+alter table table_name drop primary key ;
+
   DML：
   同时修改多表
   update t1,t2  set t1.name=t2.name, t2.name=t1.name ;
@@ -125,3 +137,20 @@ insert into test values( 'a,b'),('a,c'),('b,c') ; warning：('a,c,c') == ('a,c')
 
 运算符：位或(|)，位与(&)，位异或(xor ^ )，位取反(~)，like，is null ， is not null , regexp==rlike 正则匹配 , <=> null也可比较等于  
   
+  
+  
+ create table user(
+ 	`id` int(11) unsigned not null auto_increment,
+ 	`name` varchar(30) not null default '',
+ 	primary key(`id`)
+ )engine=innodb default charset=utf8 auto_increment=1
+ 
+ create table customer(
+ 	`id` int(11) unsigned not null auto_increment,
+ 	`name` varchar(30) not null default '',
+ 	`user_id` int(11) unsigned not null default 0,
+ 	primary key(`id`)
+ )engine=innodb constraint fk_userid_id foreign key(userid) references user(`id`)
+ 
+ show create table_name;
+ explain select ...

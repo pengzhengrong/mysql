@@ -1,0 +1,176 @@
+函数必须有返回值，存储过程没有!
+create procedure sp_name( [proc_parameter] )
+	[characteristic ...] routine_body
+	
+create function sp_name([func_parameter])
+	returns type
+	[characterstic ...] routine_body
+	
+proc_parameter :  [IN|OUT|INOUT] param_name type
+
+func_parameter : param_name type
+
+call sp_name[parameter...]
+
+-- 插入数据并且返回id
+delimiter $$
+create function insert_id( in sql varchar , out id int)
+returns int
+ sql 
+ 
+ -- 存储过程(验证用户登入信息)
+ delimiter $$
+ create  procedure check_login( in username varchar(20) , in pwd varchar(20))
+ reads sql data
+ begin
+  select count(1) from `user` where `username`=username and `password`=pwd;
+ end $$
+ delimiter ;
+ 
+ -- 删除
+ drop [procedure|function] [if exists] sp_name;
+ 
+
+关于sql_mode
+	之前碰到过php insert数据的时候，先经过json_encode,但是只支持utf-8，汉字会被转码unicode。最后插入的数据斜杠/都没了。
+	select @@sql_mode;
+	set sql_mode='REAL_AS_FLOAT,PIPES_AS_CONCAT,ANSI_QUOTES,IGNORE_SPACE,ANSI,NO_BACKSLASH_ESCAPES';
+	insert into `user`(`username`) values("\\name"); 那么//不会转义
+ 	
+ 	NO_BACKSLASH_ESCAPES 使反斜杠成为了普通的字符
+ 	ANSI：REAL_AS_FLOAT,PIPES_AS_CONCAT,ANSI_QUOTES,IGNORE_SPACE,ANSI的组合
+ 	STRICT_TRANS_TABLES : 严格模式不允许非法日期，超长字段，对于超长字段给出错误而不是警告。
+ 	TRADITIONAL ： 严格模式，一旦错误立即回滚
+ 	
+ 	sql_mode 的好处在于数据库的迁移，会更加的方便。
+ 	
+mysql分区
+	list 分区
+	column 分区
+ 	range 分区
+ 	hash 分区
+ 	
+优化：
+	索引优化：
+		1. sql语句，有%的like，即使申明为索引，sql语句也不会使用索引。
+		2. 类型转换，如果索引为string型，而sql查询的时候写成int型，那么会进行类型转换也会使用不到索引。
+		3. 复合索引，只会索引从前到后的，eg : create index idx_title(`name`,`age`,`title`) on `account` .只有`name`，(`name`,`age`) 可以作为索引
+		
+	定期check表，OPTIMIZE操作
+	sql语句优化：
+		批量导入数据： 
+			alter table tbl_name DISABLE KEYS
+				loading data  ( load data infile '/home/mysql/sql.txt' into table film_test ;)
+			alter table tbl_name ENABLE KEYS
+			先将数据导入，在设置非唯一索引。在批量导入的时候是一个很好的优化方案。
+ 	order by 优化：
+ 		可以使用索引优化：
+ 			1. select * from tabname order by key_part1,key_part2... 
+ 			2. select * from tabname where key_part1=1 order by key_part1 desc , key_part2 desc;
+ 			3. select * from tabname order by key_part1 desc ,key_part2 desc;
+ 		不可使用索引优化：
+ 			1. select * from tabname order by key_part1 desc , key_part asc; -- 混合使用升序和降序
+ 			2. select * from tabname where key_part1=constant order by key1; -- 查询行关键字和order by使用的不同。
+ 			3. select * from tabname order by key1,key2; -- 对不同的关键字使用order by
+ 		join 比子查询速度更快，省去了创建临时表的过程。
+ 		or条件查询最好是or的条件有索引，才会查询的时候用的索引。
+ 		* 分页优化
+ 			select * from jobs limit 1000,10; 类似这种的分页查询，需要查询前面的1000行，然后丢弃，最后选取1001-1010,所以性能就差了。
+ 			select a.* from jobs a  inner join (select id from jobs limit 50,10 ) b on a.id=b.id;
+		使用sql提示
+			select * from jobs use|ignore|force index(`idx_id`); 
+ 			建议sql执行的时候按照给定的提示执行。分别为use,ignore,force
+ 		sql语句的正则表达( regex | regexp )
+ 			select * from jobs where email regexp "@163[.,]com";  
+ 		* sql随机数，抽样调查或者其他
+ 			select * from jobs order by rand() limit 1,5;  rand()随机数
+ 		* 利用group by 的 with rollup 子句
+ 			1. select data_format( payment_date,'%Y-%m'),staff_id,sum( amount) from payment group by data_format( payment_date,'%Y-%m'),staff_id;
+ 			2. select data_format( payment_date,'%Y-%m'),iIFNULL(staff_id,''),sum(amount) from payment group by data_format( payment_date,'$Y-%m'),staff_id with rolliup;
+ 		* 用bit_or 和 bit_add 做统计
+ 			eg：2进制代表购物的商品 1111 ： 花生 啤酒 牛奶 可乐 四种。1代表购买，0代表没买
+ 			那么 bit_or( kind ) 表示购买的所有商品种类，bit_add( kind ) 表示每次购物都会买的物品 or 和 and 实质为二进制的或 和 与
+
+优化数据库对象：
+	问题1. 是否所有的表都设计成第三范式？
+	问题2. 字段设置多大长度合适？
+	1. 优化表的数据类型：	PROCEDURE ANALYSE() 对当前应用的表进行分析
+	2. 拆分提高表的访问效率 
+		(1) 垂直拆分：某些列常用，某些列不常用。 
+		(2) 水平拆分 :  表很大，表中的数据本身具有独立性，需要把数据存放在多个介质上。
+	3. 逆规范化
+			增加冗余列
+			增加派生列
+			重新组表
+			分割表
+			对逆规范化技术需要维护数据的完整性。可以通过定时批量处理，逻辑实现增删改查，触发器
+	4. 临时表
+			统计的时候，可以做一个临时的表，灵活运用临时表可以对上线的不产生任何影响。
+
+锁问题
+	myisam 表级锁：开销小，无死锁，发生锁冲突的概率最高，并发度最低
+		以查询为主，少量按索引条件更新数据的情况
+	innodb 行级锁 ：开销大，有死锁，发生锁冲突的概率最低，并发度最高
+		大量按索引条件并发更新少量不同数据，同时又有并发查询的数据
+	bdb      页面锁 ：居于mysiam和innodb中间
+	
+	myisam表级锁：
+		1. 以查询为主，少量按索引条件更新数据的应用
+		2. 查看表级锁的争用情况
+			show status like 'table%' ; 
+			table_locks_immediate 和 table_locks_waited 
+			table_locks_waited 越高，表明表级锁的竞争越高。
+		3. 表级锁的锁模式
+			对myisam的读操作，不会阻塞其他用户对同一表的读请求。但会阻塞对同一表的写请求
+			对myisam的写操作，阻塞对同一表的读和写操作。
+		4. 如何加锁表
+			myisam 执行select时，会自动加读锁。执行update,delete,insert时，会自动加写锁。
+		5. 锁调度
+			myisam会优先执行写操作，在执行读操作。即使读请求先到，也会先执行写操作。因此，可能使读请求一直处于无限等待的状态。
+			解决问题：
+				(1) 启动参数low-priority-updates，使myisam引擎默认给予读请求以优先的权利。
+				(2) 执行命令set low_priority_updates=1 使该连接发出的更新请求优先级降低。
+				(3) 通过指定insert,delete,update 语句的low_priority 属性，降低该语句的优先级。
+				(4) 给系统参数max_write_lock_count 设置一个合适的值，当一个表的读锁达到这个值后，mysql暂时将写请求的优先级降低，执行读请求。
+	innodb 锁问题
+		和myisam的最大2不同点：
+		 1. 支持事务
+		 2. 采用行级锁
+		事务ACIM
+			原子性：atomicity
+			一致性：consistent
+			隔离性：isolation
+			持久性：durable
+		并发处理事务带来的问题
+			更新丢失：2个事务同时修改一行，其中的一个修改覆盖了另外一个。造成了数据的丢失。解决：加锁。这个是最好不允许发生的。
+			不可重复读：事务读取某个数据的某个时间，再次读，数据不存在或者变化
+			脏读：一个事务修改未提交前，另外一个读取数据，产生的脏读。
+			幻读：按相同条件查询，检索出前后2种不同的结果
+		事务隔离级别，隔离级别依次增高 a：脏读 b：不可重复读 c：幻读
+			1. 未提交读：允许abc
+			2. 已提交读：允许bc
+			3. 可重复读：允许c
+			4. 可序列化：都不允许
+		获取innodb 行锁争用情况
+			show status like 'innodb_row_lock%';
+			select * from innodb_locks;
+			select * from innodb_lock_waits;
+			create table innodb_monitor( a int) engine=innodb;
+		innodb 行锁实现方式
+			innodb行锁，实际上通过给索引上的索引项加锁实现，没有索引innodb通过隐藏的聚簇索引来对记录加锁。如果不通过索引检索数据，那么将对表加锁。实际成为了表级锁。
+			方式：
+				record：对索引项加锁
+				gap lock：对索引项之间的间隙，第一条记录前的间隙或者最后一条记录后的间隙 加锁
+				next-key lock：前两种的组合，对记录及其前面的间隙加锁。
+					何为间隙锁：如果加锁的记录实际上并不存在，但是也会加锁，防止幻读，那么这则为间隙锁。
+			给索引项加锁：如果2个用户分别使用同一个索引进行索引，那么会出现锁冲突。
+			
+			
+	
+	
+	
+	
+ 			
+ 			
+ 			
+ 			
