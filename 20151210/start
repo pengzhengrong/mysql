@@ -50,11 +50,15 @@ DDL：
   显示表结构
   desc `account_user`;
   修改索引
+  show index from `xw_vote_detail`;
+  alter table `xw_vote_detail` drop index rdate;
+  alter table `xw_vote_detail` add index(`actid`)
+  alter table `xw_vote_detail` add index(`deviceid`);
+  
   alter table `account_user` add index index_name(`name`)
   alter table `account_user` add unique(`name`)
   alter table `account_user` add primary key `name`
   create index `name` on account_user( `name`)
-  alter table `account_user` drop index(`name`)
   alter table `account_user` add index(`username`,`password`);  
   create index idx_title on account( title(10) ); 排序和分组无效 对title的前10个字符进行索引。
   
