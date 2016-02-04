@@ -1,0 +1,7 @@
+分析各种sql的执行频率
+	show status like 'com_%'; 
+		com_xxx 表示每个xxx语句执行的次数。例如：com_select 表示查询的次数。通过这些数字能够分析出数据库是以查询为主还是插入为主。
+	
+	
+	explain select count(1) as count from xw_vote_detail where actid=31 and created=1454428800 and status = 1 ;
+		执行时间0.013sec , key rdate		
