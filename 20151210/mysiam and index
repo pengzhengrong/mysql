@@ -46,4 +46,6 @@
 	4. 最左索引，创建一个n列的索引时，以最左的索引来匹配行。
 	5. 不能过渡使用索引。浪费内存，影响速度。
 	
+为什么myisam 对 select 和 insert 更加的支持？（http://blog.csdn.net/e421083458/article/details/17569657）
+	myisam 是对整张表进行锁定的。
 	

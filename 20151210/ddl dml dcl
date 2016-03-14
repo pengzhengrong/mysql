@@ -47,6 +47,7 @@ DDL：
   alter table `account_user` change `createtime` `createdate` int(11) ;
   修改表名
   alter table `account_user` rename `account_users` ; 
+  rename table `account_user` to `account_users`;
   显示表结构
   desc `account_user`;
   修改索引
@@ -158,3 +159,10 @@ insert into test values( 'a,b'),('a,c'),('b,c') ; warning：('a,c,c') == ('a,c')
  
  show create table_name;
  explain select ...
+ 
+ 
+ 
+ mysql -uroot -h127.0.0.1 数据库的连接 如果有密码 -pxxx
+ mysqldump -uroot -h127.0.0.1 test > ~/desktop/temp.txt 数据库的备份
+  mysqldump -uroot -h127.0.0.1 test < ~/desktop/temp.txt 数据库的恢复
+ 

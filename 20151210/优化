@@ -76,7 +76,8 @@ mysql分区
  		or条件查询最好是or的条件有索引，才会查询的时候用的索引。
  		* 分页优化
  			select * from jobs limit 1000,10; 类似这种的分页查询，需要查询前面的1000行，然后丢弃，最后选取1001-1010,所以性能就差了。
- 			select a.* from jobs a  inner join (select id from jobs limit 50,10 ) b on a.id=b.id;
+ 			select a.* from jobs a  inner join (select id from jobs limit 50,10 ) b on a.id=b.id; //用到索引的原因
+ 			另外一种是根据最后的id而limit n形式。
 		使用sql提示
 			select * from jobs use|ignore|force index(`idx_id`); 
  			建议sql执行的时候按照给定的提示执行。分别为use,ignore,force

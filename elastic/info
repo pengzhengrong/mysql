@@ -1,0 +1,196 @@
+1. db 和 elastic 的对应关系
+	db : 		  database -> tables -> rows -> columns
+	elastic : indeces    -> types  -> documents -> fields 
+
+2. 索引的区分：在elastic索引有着不同的含义
+	 索引(名词) ： 传统关系数据库的数据库意思
+	 索引(动词) ： ·「索引一个文档」 表示把一个文档存储到索引(名词)，以便被检索或者查询。相当与db的insert，
+	 						 然后不同的是如果文档存在会被覆盖。
+	 倒排索引   ： 传统数据库为特定列增加索引，而elastic采用一种倒排索引的数据结构达到目的。默认情况下，
+	 						文档中的所有字段都会被索引(拥有一个倒排索引)。
+	 						
+curl	-XGET	'localhost:9200/_count?pretty'	-d	'
+{
+				"query":	{
+								"match_all":	{}
+				}
+}'
+
+
+GET	/_count
+{
+				"query":	{
+								"match_all":	{}
+				}
+}
+
+ curl	-XPUT	'localhost:9200/megacorp/employee/1?pretty' -d '
+{
+				"first_name"	:	"John",
+				"last_name"	:		"Smith",
+				"age"	:								25,
+				"about"	:						"I	love	to	go	rock	climbing",
+				"interests":	[	"sports",	"music"	]
+}'
+
+在/usr/share/elasticsearch/bin 下执行的命令
+create index :
+curl -XPUT 'localhost:9200/megacorp'
+add data : 
+curl	-XPUT	'localhost:9200/megacorp/employee/1?pretty' -d '{"name":"pzr","age":21}'
+get data  :
+curl -XGET 'localhost:9200/megacorp/employee/1?pretty'
+delete index(删除数据库的意思)
+curl -XDELETE 'localhost:9200/megacorp?pretty'
+
+请求name为pzr的信息
+http://localhost:9200/_search?q=name:pzr
+
+DSL 语句查询（特定领域语言）以json请求体的形式出现
+GET	/megacorp/employee/_search
+{
+				"query"	:	{
+								"match"	:	{
+												"last_name"	:	"Smith"
+								}
+				}
+}
+
+复杂的查询
+GET	/megacorp/employee/_search
+{
+	"query"	:	{
+								"filtered"	:	{
+												"filter"	:	{
+																"range"	:	{
+																				"age"	:	{	"gt"	:	30	}	<1>
+																}
+												},
+												"query"	:	{
+																"match"	:	{
+																				"last_name"	:	"smith"	<2>
+																}
+												}
+								}
+				}
+}
+
+全文搜索
+GET	/megacorp/employee/_search
+{
+				"query"	:	{
+								"match"	:	{
+												"about"	:	"rock	climbing"
+								}
+				}
+}
+
+可以查看到所有喜欢rock 或者 climbing 的信息
+{
+			...
+			"hits":	{
+						"total":						2,
+						"max_score":		0.16273327,
+						"hits":	[
+									{
+												...
+												"_score":									0.16273327,	<1>
+												"_source":	{
+															"first_name":		"John",
+															"last_name":			"Smith",
+															"age":									25,
+															"about":							"I	love	to	go	rock	climbing",
+															"interests":	[	"sports",	"music"	]
+												}
+									},
+									{
+												...
+												"_score":									0.016878016,	<2>
+												"_source":	{
+															"first_name":		"Jane",
+															"last_name":			"Smith",
+															"age":									32,
+															"about":							"I	like	to	collect	rock	albums",
+															"interests":	[	"music"	]
+												}
+									}
+						]
+			}
+}
+分析：elastic 会根据结果的相关性进行排序。_score 描述了匹配度的分数。全局索引的重点在于相关性的概念。
+	关系数据库中，只存在匹配或者不匹配。但是elastic 存在着相关性搜索。
+	
+短语搜索
+	查询同时包含2个单词的。
+	GET	/megacorp/employee/_search
+	{
+					"query"	:	{
+									"match_phrase"	:	{
+													"about"	:	"rock	climbing"
+									}
+					}
+	}
+	只返回同时包含这两个单词的文档
+	
+高亮我们的搜索
+	GET	/megacorp/employee/_search
+	{
+					"query"	:	{
+									"match_phrase"	:	{
+													"about"	:	"rock	climbing"
+									}
+					},
+					"highlight":	{
+									"fields"	:	{
+													"about"	:	{}
+									}
+					}
+	}
+
+聚合查询(aggregations) 很像sql的group by 但是更加强大
+	(1) 查看共同的兴趣爱好
+		GET	/megacorp/employee/_search
+		{
+				"aggs":	{
+						"all_interests":	{
+								"terms":	{	"field":	"interests"	}
+						}
+				}
+		}
+	(2) 查看所有姓smith的兴趣爱好
+		GET	/megacorp/employee/_search
+		{
+				"query":	{
+						"match":	{
+								"last_name":	"smith"
+						}
+				},
+				"aggs":	{
+						"all_interests":	{
+								"terms":	{
+										"field":	"interests"
+								}
+						}
+				}
+		}
+	(3) 统计每种兴趣下职员的平均年龄
+		GET	/megacorp/employee/_search
+		{
+				"aggs"	:	{
+								"all_interests"	:	{
+												"terms"	:	{	"field"	:	"interests"	},
+												"aggs"	:	{
+																"avg_age"	:	{
+																				"avg"	:	{	"field"	:	"age"	}
+																}
+												}
+								}
+			}
+
+
+
+当然这只是一些皮毛,为了保持简短,还有很多的特性未提及
+——像推荐、定位、渗透、模糊以及部分匹配等。但这也突出了构建高级搜索功能是多么的容易。无需配置,只需要添加数
+据然后开始搜索!
+
+
