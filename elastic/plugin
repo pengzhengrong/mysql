@@ -1,0 +1,59 @@
+./bin/plugin install https://github.com/NLPchina/elasticsearch-sql/releases/download/2.2.0.1/elasticsearch-sql-2.2.0.1.zip 
+sudo elasticsearch/bin/plugin install mobz/elasticsearch-head
+
+curl -XPUT 'http://localhost:9200/blog/think_blog/_mapping' -d '
+{
+    "think_blog": {
+        "properties": {
+            "id": {
+                "type": "string",
+                "store": "yes"
+            },
+            "title": {
+                "type": "string",
+                "store": "yes"
+            },
+            "content": {
+                "type": "string",
+                "store": "yes"
+            }
+        }
+    }
+}'
+
+
+curl -XPUT 'http://localhost:9200/_river/test/_meta' -d '{
+    "type": "jdbc",
+    "jdbc": {
+        "driver": "com.mysql.jdbc.Driver",
+        "url": "jdbc:mysql://localhost:3306/test",
+        "user": "root",
+        "password": "",
+        "sql": "select id as _id,title,content from think_blog",
+        "index": "blog",
+        "type": "artical",
+        "bulk_size": 100,
+        "max_bulk_requests": 30,
+        "bulk_timeout": "10s",
+        "flush_interval": "5s",
+        "schedule": "0 0-59 0-23 ? * *"
+    }
+}'
+
+curl -XPUT 'http://localhost:9200/_river/blog/_meta' -d '{
+    "type": "jdbc",
+    "jdbc": {typety
+        "driver": "com.mysql.jdbc.Driver",
+        "url": "jdbc:mysql://localhost:3306/test",
+        "user": "root",
+        "password": "",
+        "sql": "select id as _id,title,content from think_blog",
+        "index": "blog",
+        "type": "artical",
+        "bulk_size": 100,
+        "max_bulk_requests": 30,
+        "bulk_timeout": "10s",
+        "flush_interval": "5s",
+        "schedule": "0 0-59 0-23 ? * *"
+    }
+}'

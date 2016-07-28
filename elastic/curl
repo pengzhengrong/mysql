@@ -1,0 +1,238 @@
+|-- curl -XGET http://localhost:9400/_cluster/state/nodes
+|-- curl -XPOST http://localhost:9400/_cluster/nodes/node-key/_shutdown
+|-- curl -XDELETE http://localhost:9200/index_name   //delete
+|-- curl -XPUT http://localhost:9200/index_name/type_name/id -d'{data}'  //put
+      |--curl -XPUT http://localhost:9200/blog/artical/1 -d '{"title":"elastic","content":"study elasticsearch","tags":["elasticsearch","release","announce"]}'
+|-- curl -XPOST http://localhost:9200/blog/artical -d '{"title":"elastic","content":"study elasticsearch","tags":["elasticsearch","release","announce"]}'
+|-- curl -XGET http://localhost:9200/blog/artical/1?pretty
+|-- curl -XPOST http://localhost:9200/blog/artical/1/_update -d '{"script":"ctx._source.content=\"new elasticsearch\"}'
+|-- curl -XPOST http://localhost:9200/blog/artical/1/_update -d '{"script":"ctx._source.counter += 1","upsert":{"counter":0}}'
+	//curl -XPOST http://localhost:9200/blog/artical/1/_update -d '{"script":{"lang":"groovy","script_file":"some-name","params":{"content":"new content"}}}'
+|-- curl -XGET 'localhost:9400/blog/_mapping?pretty'  //mapping
+|-- curl -XDELETE 'localhost:9400/blog/artical/1?version=1' //if version > 1.0 ,delete failed
+|-- curl -XPUT 'localhost:9400/blog/artical/1?version=123'  //if version > now.version ,update version success
+|-- curl -XGET 'localhost:9400/blog/_analyze?field=title' -d 'Elasticsearch Server'
+|-- curl -XGET 'localhost:9400/blog/_search?pretty&q=title:hello&df=title&explain=true&default_operator=AND'
+	|-- curl -XGET 'localhost:9400/blog/_search?pretty&field={title,content}&default_operator=AND'
+	|-- curl -XGET 'localhost:9400/blog/_search?pretty&q=+content:2'
+
+|--  
+curl -XPOST http://localhost:9400/blog -d '{
+	"mappings":{
+	  "php":{
+		"properties":{
+			"id":{"type":"integer","store":"yes"},
+			"name":{"type":"string","store":"yes"},
+			"content":{"type":"string","store":"yes"}
+		}
+	  },
+	  "java":{
+		"properties":{
+			"id":{"type":"integer","store":"yes"},
+			"name":{"type":"string","store":"yes"},
+			"content":{"type":"string","store":"yes"}
+		}
+	  }
+	}
+	
+}' 
+|-- curl -XGET http://localhost:9400/blog?pretty
+|-- curl -XDELETE http://localhost:9400/blog/php
+
+
+DEFINED YOURSELF IDNEX
+|-- config.defined index
+|-- field types
+	|-- string 
+	|-- number
+		|-- byte   -- short  -- long  -- integer  -- double  -- float
+	|-- date
+	|-- boolean
+	|-- binary
+|-- config.mapping config
+	|-- 
+
+PUBLIC ATTRIBUTE
+|-- index_name : 该属性定义将存储在索引中的字段名称,若未定义将以对象的名字来命名
+|-- index : 可以设置为 analyzed || no ,如果基于string 的字段,可以设置为 not_analyzed
+	|-- analyzed : 默认,该字段将被编入索引以供搜索.
+	|-- no : 无法搜索该字段
+	|-- not_analyzed : 字段将不经过分析而编入索引,使用原始值被编入索引,在搜索过程中必须全部匹配.
+|-- store : 可以设置为 yes || no ,指定该字段的原始值是否被写入索引中.
+	|-- no :  默认,结果中不能返回该字段( 如果使用了 _source 字段,即使没有存储也可以返回).如果该值编入索引,仍可以基于它搜索.
+	|-- yes : 
+|-- boost : 默认值1, boost 的值越高,那么重要性越高.
+|-- null_value : 如果该字段并非索引文档的一部分,此属性指定应写入索引的值. 默认的行为是忽略该字段.
+|-- copy_to : 此属性指定一个字段,字段的所有值都将复制到该指定字段.
+|-- include_in_all : 此属性指定该字段是否应该包括在_all 字段中.默认情况下,用_all 字段,所有字段都会包括其中.
+STRING ATTRIBUTE
+NUMBER ATTRIBUTE
+BOOL ATTRIBUTE
+BINARY ATTRIBUTE
+DSTE STTRIBUTE
+
+多字段类型
+	(例如: 一个字段用于搜索,一个字段用于排序; 一个字段经语言分析器分析,一个字段基于空白符分析)
+	(将创建2个字段,第一关ie字段称为name,第二个字段称为name.facet.索引的过程中不必指定2个字段,1个name就够)
+"name":{
+	"type":"string",
+	"fields":{ "facet":{"type":"string","index":"not_analyzed"} }
+}
+
+IP 类型
+"address":{ "type":"ip","store":"yes" }
+
+token_count 类型
+	(允许存储有关索引的字数信息,不是存储及检索该字段的文本)
+"address_count":{ "type":"token_count","store":"yes" }
+
+分析器
+	开箱即用的分析器
+	|-- standard : 方便大多数欧洲语言的标准分析器
+	|-- simple : 这个分析器基于非字母字符来分离所提供的值,并将其转换为小写的形式
+	|-- whitespace : 基于空格字符分离所提供的值
+	|-- stop : 类似与simple,除了simple的功能,还能基于所提供的停用词( stop word)过滤数据.
+	|-- keyword : 这是一个非常简单的分析器,只传入提供的值. 可以通过指定的字段为not_analyzed 来达到相同的目的.
+	|-- pattern : 通过使用正则表达式灵活的分离文本.
+	|-- language : 旨在特定的语言环境下工作.
+	|-- snowabll : 类似于 standard,但提供了词干提取算法.
+设置自定义分析器
+"setting":{
+	"index":{
+		"analysis":{
+			"analyzer":{
+				"en":{           						//自定义分析器
+					"tokenizer":"standard", //一个分析器
+					"filter":[                          // 多个过滤器
+						"asciifolding",
+						"lowercase",
+						"ourEnglishFilter"     //自定义过滤器
+					]
+				}
+			}
+		}
+	},
+	"filter":{
+		"ourEnglishFilter":{
+			"type":"kstem"
+		}
+	}
+}
+|-- "name":{"type":"string","store":"yes","index":"analyzed","analyzer":"en"}
+
+分析器字段
+默认分析器 (只需要i将自定义分析器的 en  改写成 default  即可)
+
+不同的相似度模型 (允许在文档中使用不同的评分公式)
+|-- BM25
+|-- DFR
+|-- IB
+|-- "content":{"type":"string","store":"yes","similarity":"BM25"}
+
+信息格式 (利用可以改变索引文件写入的方式,为每个字段指定信息格式. 改变字段被索引的方式提高性能,例如主键的查询更快)
+|-- default : 默认,实时的对存储字段和词向量的压缩.
+|-- pulsing : 
+|-- direct : 
+|-- memory : 
+|-- bloom_default : 
+|-- bloom_pulsing : 
+|-- "id":{"type":"long","store":"yes","postings_format":"plusing"}
+
+CONFIG elasticsearch.yml
+|-- _update
+|-- script.inline:on
+|-- script.indexed:on
+|-- script.file:on
+
+|-- deleted version cache time
+|-- index.gc_deletes=60 // default
+
+|-- defined index
+|-- action.auto_create_index : false //close auto create index
+	|-- action.auto_create_index: -an*,+a*,-*  //means do't accept an* index created,and accept a* index created ,others need to DIY 
+
+|-- mapping config
+|-- numeric_detection: true // will be start more strict  mode to analyze 
+|-- dynamic_date_formats : ["yyyy-MM-dd hh:mm","yyyy-MM-dd"]
+|--  {"dynamic":false,           //禁用字段类型猜测
+	"properties":{
+		"id":{"type":"long"},
+		"content":{"type":"string"},
+		"author":{"type":"string"}
+	}
+      }//exact the field's type 
+|-- mapping.json
+|-- {
+	"mappings":{
+	  "type_name1":{
+	  	"properties":{
+			"id":{"type":"long","store":"yes","precision_step"},
+			"name":{"type":"string","store":"yes","index":"analyzed"},
+			"publicshed":{"type":"date","store":"yes","precision":"0"},
+			"contents":{"type":"string","store":"no","index":"analyzed"}
+		}
+	  },
+	  "type_name2":{
+	  	"properties":{}
+	  }
+	}	
+}
+|-- curl XPOST http://localhost:9200/blog -d @mapping.json
+
+
+SCRIPT
+|-- ctx._source    //eg: {"script":"ctx.source.field=value"}  update some filed by _source script
+|-- upsert             // eg: {"upsert":{"key":"value"}}  use upsert to give key a default value
+|-- _cluster
+|-- _update
+|-- _shutdown
+|-- _mapping
+|-- _search
+|-- _analyze
+|-- curl -XGET 'localhost:9400/blog/_search?pretty&q=title:hello&df=title&explain=true&default_operator=AND'
+	|-- q  // the condition to search
+	|-- df  //if q is null will use df to search
+	|-- explain //default false ,explain the extra info
+	|-- default_operator  //default OR , and can choose AND. means all condition use OR or AND to search
+	|-- field={title,content} // will be searched one by one.
+	|-- sort //default sort by score , sort=title:asc
+	|-- timeout=5s 
+	|-- size & from // size default 10 , from defult 0 ,find 1-10 ,  size=5&from=10 find 11-15
+	|-- search_type // default query_then_fetch ,dfs_query_then_fetch,dfs_query_and_fetch,count,scan
+	|-- lowercase_expanded_terms  //default true ,means expanded  need to lowercase?
+	|-- analyze_ildcard  //default true ,不会分析通配符和前缀
+	|-- 查询被分为词和操作符.
+		|-- title:book
+		|-- title:"elastic book"
+		|-- title:(elastic book)
+		|-- title:book^4
+		|-- +title:book -description:cat
+			|-- 操作符+ 告诉lucene给定的部分必须在文档中匹配
+			|-- 操作符-  正好相反
+			|-- 不存在+ - 可以匹配但是非强制性的查询
+|-- 
+
+METHOD
+|-- -XGET
+|-- -XPUT
+|-- -XDELETE
+|-- -XPOST
+|-- -XHEAD
+
+STRUCTS
+|-- cluster
+|-- node
+|-- shard
+|-- document
+|-- index
+|-- type
+
+PROGRESS
+发散阶段
+	应用程序 ---> 查询节点 ---> 根据文档的唯一标识符计算文档应该放到哪个分片  ---> 转发文档到相关分片的目标节点
+	发散阶段主要通过文档标识符 和 得分
+ 收集阶段
+ 	收到信息  --->  对结果进行排序  ---> 发送第二个请求获取结果列表所需的文档(除了标识符和得分以外) 
+ 输入数据分析
+ 	输入文本 ---> (0-n)字符映射器(eg:去除未被处理的HTML标签) ---> (1)分词器(将文本分割成多个标记,基本就是加上一些额外的信息) ---> 形成标记流 ---> (0-n)标记过滤器
+ 	

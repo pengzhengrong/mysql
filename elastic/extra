@@ -39,6 +39,14 @@ PUT	/blogs
 
 ---现在的集群功能完备，但是依旧存在因硬件故障而导致数据丢失的情况。		
 		
+		
+英文文档解析:
+1. NRT (Near Realtime) :查询的时间很短很快.
+2. Cluster 集群
+3. Node 节点
+4. Index 索引 类似数据库
+5. Type 类似数据库的table
+6. Document 类似数据库的记录
 
 	   	
 	   	
